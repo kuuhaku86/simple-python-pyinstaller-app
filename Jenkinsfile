@@ -22,13 +22,6 @@ pipeline {
             steps {
                 echo 'Installing dependencies inside Docker container...'
                 sh 'pip install pytest pyinstaller --break-system-packages'
-
-                withCredentials([file(credentialsId: 'gcp-service-account-key', variable: 'GCP_KEY')]) {
-                    sh """
-                        gcloud auth activate-service-account --key-file=${GCP_KEY}
-                        gcloud config set project ${PROJECT_ID}
-                    """
-                }
             }
         }
 
@@ -60,36 +53,44 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    try {
-                        echo "1. Membuat Instance GCE: ${VM_NAME}..."
-                        sh """
-                            gcloud compute instances create ${VM_NAME} \
-                                --zone=${ZONE} \
-                                --machine-type=${MACHINE_TYPE} \
-                                --image-family=ubuntu-2204-lts \
-                                --image-project=ubuntu-os-cloud \
-                                --tags=http-server,https-server \
-                                --metadata=startup-script='#!/bin/bash
-                                    apt-get update && apt-get install -y python3'
-                        """
+                    withCredentials([file(credentialsId: 'gcp-service-account-key', variable: 'GCP_KEY')]) {
+                        try {
+                            echo "1. Autentikasi GCP..."
+                            sh """
+                                gcloud auth activate-service-account --key-file=${GCP_KEY}
+                                gcloud config set project ${PROJECT_ID}
+                            """
 
-                        echo "Menunggu VM siap..."
-                        sh 'sleep 20'
+                            echo "2. Membuat Instance GCE: ${VM_NAME}..."
+                            sh """
+                                gcloud compute instances create ${VM_NAME} \
+                                    --zone=${ZONE} \
+                                    --machine-type=${MACHINE_TYPE} \
+                                    --image-family=ubuntu-2204-lts \
+                                    --image-project=ubuntu-os-cloud \
+                                    --tags=http-server,https-server \
+                                    --metadata=startup-script='#!/bin/bash
+                                        apt-get update && apt-get install -y python3'
+                            """
 
-                        echo "2. Mengirim file ke VM GCE..."
-                        sh "gcloud compute scp dist/add2vals ${VM_NAME}:~/ --zone=${ZONE} --quiet"
+                            echo "Menunggu VM siap..."
+                            sh 'sleep 20'
 
-                        echo "3. Menjalankan aplikasi di VM GCE..."
-                        sh """
-                            gcloud compute ssh ${VM_NAME} --zone=${ZONE} --command="chmod +x ~/add2vals && ./add2vals" --quiet
-                        """
-                        
-                        echo "4. Menjeda eksekusi selama 1 menit (Kriteria 3)..."
-                        sh 'sleep 60'
+                            echo "3. Mengirim file ke VM GCE..."
+                            sh "gcloud compute scp dist/add2vals ${VM_NAME}:~/ --zone=${ZONE} --quiet"
 
-                    } finally {
-                        echo "5. Menghapus Instance GCE (Kill): ${VM_NAME}..."
-                        sh "gcloud compute instances delete ${VM_NAME} --zone=${ZONE} --quiet"
+                            echo "4. Menjalankan aplikasi di VM GCE..."
+                            sh """
+                                gcloud compute ssh ${VM_NAME} --zone=${ZONE} --command="chmod +x ~/add2vals && ./add2vals" --quiet
+                            """
+                            
+                            echo "5. Menjeda eksekusi selama 1 menit (Kriteria 3)..."
+                            sh 'sleep 60'
+
+                        } finally {
+                            echo "6. Menghapus Instance GCE (Kill): ${VM_NAME}..."
+                            sh "gcloud compute instances delete ${VM_NAME} --zone=${ZONE} --quiet"
+                        }
                     }
                 }
             }

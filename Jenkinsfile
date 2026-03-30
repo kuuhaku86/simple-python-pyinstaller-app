@@ -50,7 +50,7 @@ pipeline {
         stage('Test') {
             steps {
                 sh 'mkdir -p test-reports'
-                sh 'python3 -m pytest --verbose --junit-xml test-reports/results.xml sources/test_calc.py'
+                sh './venv/bin/python3 -m pytest --verbose --junit-xml test-reports/results.xml sources/test_calc.py'
             }
             post {
                 always {

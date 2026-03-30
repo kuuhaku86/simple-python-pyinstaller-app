@@ -1,7 +1,7 @@
 pipeline {
     agent {
         docker {
-            image 'google/cloud-sdk:slim'
+            image 'python:3.9-bullseye' 
             args '-u root'
         }
     }
@@ -20,8 +20,18 @@ pipeline {
     stages {
         stage('Preparation') {
             steps {
-                echo 'Installing dependencies inside Docker container...'
-                sh 'pip install pytest pyinstaller --break-system-packages'
+                echo 'Installing GCloud SDK and Python dependencies...'
+                sh '''
+                    # Install GCloud SDK manual
+                    apt-get update && apt-get install -y curl gnupg
+                    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+                    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /share/keyrings/cloud.google.gpg add -
+                    apt-get update && apt-get install -y google-cloud-cli
+                    
+                    # Setup Venv
+                    python3 -m venv venv
+                    ./venv/bin/pip install pytest pyinstaller
+                '''
             }
         }
 
@@ -74,7 +84,7 @@ pipeline {
                             """
 
                             echo "Menunggu VM siap..."
-                            sh 'sleep 20'
+                            sh 'sleep 30'
 
                             echo "3. Mengirim file ke VM GCE..."
                             sh "gcloud compute scp dist/add2vals ${VM_NAME}:~/ --zone=${ZONE} --quiet"

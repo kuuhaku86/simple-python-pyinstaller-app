@@ -40,8 +40,10 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh 'python3 -m py_compile sources/add2vals.py sources/calc.py'
-                sh 'python3 -m PyInstaller --onefile sources/add2vals.py'
+                sh '''
+                    ./venv/bin/python3 -m py_compile sources/add2vals.py sources/calc.py
+                    ./venv/bin/pyinstaller --onefile --paths=sources sources/add2vals.py
+                '''
             }
         }
 

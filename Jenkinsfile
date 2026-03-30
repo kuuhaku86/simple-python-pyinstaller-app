@@ -35,7 +35,7 @@ pipeline {
         stage('Build') {
             steps {
                 sh 'python3 -m py_compile sources/add2vals.py sources/calc.py'
-                sh 'python3 -m PyInstaller --onefile sources/add2vals.py --break-system-packages'
+                sh 'python3 -m PyInstaller --onefile sources/add2vals.py'
             }
         }
 

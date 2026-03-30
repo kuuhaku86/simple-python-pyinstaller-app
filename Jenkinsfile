@@ -96,7 +96,7 @@ pipeline {
 
                             echo "4. Menjalankan aplikasi di VM GCE..."
                             sh """
-                                gcloud compute ssh ${VM_NAME} --zone=${ZONE} --command="chmod +x ~/add2vals && ./add2vals" --quiet
+                                gcloud compute ssh ${VM_NAME} --zone=${ZONE} --command="chmod +x ~/add2vals && ./add2vals 10.25 2.5" --quiet
                             """
                             
                             echo "5. Menjeda eksekusi selama 1 menit (Kriteria 3)..."
